@@ -1,76 +1,156 @@
 import turtle
 import random
 import time
+import tkinter as tk
+from tkinter import messagebox
 
 
-def setup_race():
-    screen = turtle.Screen()
-    screen.title("Turtle Race Betting")
-    screen.setup(width=800, height=600)
-    colors = ["red", "blue", "green", "orange", "purple", "yellow"]
-    racers = []
-    start_y = [-150, -100, -50, 0, 50, 100]
-    for i in range(len(colors)):
-        t = turtle.Turtle(shape="turtle")
-        t.color(colors[i])
-        t.penup()
-        t.goto(-350, start_y[i])
-        racers.append(t)
-    return screen, racers
+class TurtleRaceGUI:
+    def __init__(self, master):
+        self.master = master
+        master.title("Turtle Race Betting")
 
+        self.tokens = 100
+        self.odds = {"red": 1.5, "blue": 2.0, "green": 2.5, "orange": 1.8, "purple": 3.0, "yellow": 1.2}
+        self.colors = list(self.odds.keys())
 
-def race(racers):
-    while True:
-        for racer in racers:
-            racer.forward(random.randint(1, 10))
-            if racer.xcor() >= 350:
-                return racer.color()[0]
-        time.sleep(0.05)
+        # Display tokens and odds
+        self.token_label = tk.Label(master, text=f"Tokens: {self.tokens}")
+        self.token_label.pack(pady=5)
 
+        odds_text = "Odds:\n" + "\n".join(f"{color}: {odd}" for color, odd in self.odds.items())
+        self.odds_label = tk.Label(master, text=odds_text)
+        self.odds_label.pack(pady=5)
 
-def main():
-    tokens = 100
-    odds = {"red": 1.5, "blue": 2.0, "green": 2.5, "orange": 1.8, "purple": 3.0, "yellow": 1.2}
+        # Betting widgets
+        self.color_label = tk.Label(master, text="Select turtle color to bet on:")
+        self.color_label.pack(pady=5)
+        self.selected_color = tk.StringVar(master)
+        self.selected_color.set(self.colors[0])
+        self.color_menu = tk.OptionMenu(master, self.selected_color, *self.colors)
+        self.color_menu.pack(pady=5)
 
-    while True:
-        print("\nWelcome to Turtle Race Betting!")
-        print(f"You have {tokens} tokens.")
-        print("Turtles available and their odds:")
-        for color, odd in odds.items():
-            print(f"  {color}: {odd}")
+        self.bet_label = tk.Label(master, text="Enter bet amount:")
+        self.bet_label.pack(pady=5)
+        self.bet_entry = tk.Entry(master)
+        self.bet_entry.pack(pady=5)
 
-        bet_color = input("Enter the colour you want to bet on: ").strip().lower()
-        while bet_color not in odds:
-            bet_color = input("Invalid colour. Choose from red, blue, green, orange, purple, yellow: ").strip().lower()
+        # Control buttons
+        self.start_button = tk.Button(master, text="Start Race", command=self.start_race)
+        self.start_button.pack(pady=5)
+        self.quit_button = tk.Button(master, text="Quit", command=self.quit_game)
+        self.quit_button.pack(pady=5)
 
-        bet_amount = int(input("Enter the number of tokens you want to bet: "))
-        while bet_amount > tokens or bet_amount <= 0:
-            bet_amount = int(input(f"Invalid bet amount. You have {tokens} tokens. Enter a valid bet: "))
+    def draw_track(self):
+        drawer = turtle.Turtle()
+        drawer.hideturtle()
+        drawer.speed(0)
+        # Define track dimensions (oval)
+        track_length = 700  # horizontal distance between start and finish
+        track_width = 300  # total vertical span; radius = 150
+        radius = track_width / 2  # 150
+        start_x = -track_length / 2  # -350
 
-        tokens -= bet_amount
-        print(f"{bet_amount} tokens placed on {bet_color}. Tokens left: {tokens}")
+        # Draw the outer oval:
+        drawer.penup()
+        drawer.goto(start_x, -radius)
+        drawer.pendown()
+        # Draw left semicircle (from bottom to top)
+        drawer.circle(radius, 180)
+        # Draw top straight section
+        drawer.forward(track_length)
+        # Draw right semicircle (from top to bottom)
+        drawer.circle(radius, 180)
+        drawer.forward(track_length)
+        drawer.penup()
 
-        screen, racers = setup_race()
-        print("The race is starting!")
-        winner = race(racers)
-        print(f"The winner is the {winner} turtle!")
+        # Draw vertical start and finish lines:
+        # Start line at left edge
+        drawer.goto(start_x, -radius)
+        drawer.pendown()
+        drawer.goto(start_x, radius)
+        drawer.penup()
+        # Finish line at right edge
+        finish_x = start_x + track_length
+        drawer.goto(finish_x, -radius)
+        drawer.pendown()
+        drawer.goto(finish_x, radius)
+        drawer.penup()
 
-        if bet_color == winner:
-            payout = int(bet_amount * odds[winner])
-            print(f"Congratulations! You won {payout} tokens!")
-            tokens += payout
-        else:
-            print("Sorry, you lost the bet.")
+    def setup_race(self):
+        self.screen = turtle.Screen()
+        self.screen.title("Turtle Race")
+        self.screen.setup(width=800, height=600)
+        # Draw the horse racing track background
+        self.draw_track()
 
-        print(f"Tokens now: {tokens}")
-        play_again = input("Play again? (y/n): ").strip().lower()
-        # Clear the previous race drawing
+        racers = []
+        track_length = 700
+        track_width = 300
+        radius = track_width / 2  # 150
+        start_x = -track_length / 2  # -350
+        # Calculate lane centers for 6 lanes (evenly spaced within the track)
+        lane_spacing = track_width / 6  # 50
+        start_y_positions = [(-radius) + lane_spacing / 2 + i * lane_spacing for i in range(6)]
+
+        for i, color in enumerate(self.colors):
+            racer = turtle.Turtle(shape="turtle")
+            racer.color(color)
+            racer.penup()
+            racer.goto(start_x, start_y_positions[i])
+            racers.append(racer)
+        return self.screen, racers
+
+    def race(self, racers):
+        finish_line = 350  # since start_x = -350 and track_length = 700
+        while True:
+            for racer in racers:
+                racer.forward(random.randint(1, 10))
+                if racer.xcor() >= finish_line:
+                    return racer.color()[0]
+            time.sleep(0.05)
+
+    def start_race(self):
+        try:
+            bet_amount = int(self.bet_entry.get())
+        except ValueError:
+            messagebox.showerror("Invalid input", "Please enter a valid number for bet amount.")
+            return
+
+        if bet_amount <= 0 or bet_amount > self.tokens:
+            messagebox.showerror("Invalid bet", f"Bet must be between 1 and {self.tokens}.")
+            return
+
+        bet_color = self.selected_color.get()
+        self.tokens -= bet_amount
+        self.update_tokens()
+
+        # Run the race using Turtle graphics with the new track drawing
+        screen, racers = self.setup_race()
+        winner = self.race(racers)
+        # Instead of closing, clear for the next race
         screen.clearscreen()
-        if play_again != "y":
-            print("Thanks for playing!")
-            turtle.bye()  # Close the turtle graphics window
-            break
+
+        result_message = f"The winner is the {winner} turtle!\n"
+        if bet_color == winner:
+            payout = int(bet_amount * self.odds[winner])
+            self.tokens += payout
+            result_message += f"Congratulations, you won {payout} tokens!"
+        else:
+            result_message += "Sorry, you lost the bet."
+
+        self.update_tokens()
+        messagebox.showinfo("Race Result", result_message)
+        self.bet_entry.delete(0, tk.END)
+
+    def update_tokens(self):
+        self.token_label.config(text=f"Tokens: {self.tokens}")
+
+    def quit_game(self):
+        self.master.quit()
 
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = TurtleRaceGUI(root)
+    root.mainloop()
