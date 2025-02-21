@@ -7,6 +7,7 @@ from tkinter import messagebox
 
 class TurtleRaceGUI:
     def __init__(self, master):
+        self.xcor = []
         self.master = master
         master.title("Turtle Race Betting")
 
@@ -105,7 +106,9 @@ class TurtleRaceGUI:
         finish_line = 350  # since start_x = -350 and track_length = 700
         while True:
             for racer in racers:
+                racer.pendown()
                 racer.forward(random.randint(1, 10))
+
                 if racer.xcor() >= finish_line:
                     return racer.color()[0]
             time.sleep(0.05)
@@ -140,7 +143,7 @@ class TurtleRaceGUI:
             result_message += "Sorry, you lost the bet."
 
         self.update_tokens()
-        messagebox.showinfo("Race Result", result_message)
+        messagebox.show("Race Result", result_message)
         self.bet_entry.delete(0, tk.END)
 
     def update_tokens(self):
